@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .main-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .data-container {
+            flex: 1;
+            margin: 0 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input {
+            width: 50px;
+            text-align: center;
+            padding: 5px;
+        }
+        input[readonly] {
+            background-color: #f5f5f5;
+        }
+        .sum-row {
+            font-weight: bold;
+            background-color: #e9e9e9;
+        }
+        .ratios-container {
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .ratios-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .ratios-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .ratio-item {
+            padding: 5px 10px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            min-width: 60px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">硬币投掷统计计算器</h1>
+    
+    <div class="main-container">
+        <div class="data-container">
+            <h2>次数 (固定值20)</h2>
+            <table id="fixedTable">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>值</th>
+                    </tr>
+                </thead>
+                <tbody id="fixedBody">
+                    <!-- 固定值行由JS生成 -->
+                </tbody>
+                <tfoot>
+                    <tr class="sum-row">
+                        <td>总和</td>
+                        <td id="fixedTotal">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="data-container">
+            <h2>正面朝上的次数 (1-20)</h2>
+            <table id="randomTable">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>值</th>
+                    </tr>
+                </thead>
+                <tbody id="randomBody">
+                    <!-- 随机值行由JS生成 -->
+                </tbody>
+                <tfoot>
+                    <tr class="sum-row">
+                        <td>总和</td>
+                        <td id="randomTotal">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    
+    <div class="ratios-container">
+        <div class="ratios-title">比值记录 (正面朝上次数/总次数)</div>
+        <div class="ratios-display" id="ratiosDisplay">
+            <!-- 比值由JS生成 -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fixedBody = document.getElementById('fixedBody');
+            const randomBody = document.getElementById('randomBody');
+            const ratiosDisplay = document.getElementById('ratiosDisplay');
+            
+            // 存储18个比值
+            const ratioHistory = Array(18).fill(null);
+            let currentRatioIndex = 0;
+            
+            // 生成18行数据输入
+            for (let i = 1; i <= 18; i++) {
+                // 固定值20的行
+                const fixedRow = document.createElement('tr');
+                fixedRow.innerHTML = `
+                    <td>${i}</td>
+                    <td><input type="number" id="fixed-${i}" value="20" readonly></td>
+                `;
+                fixedBody.appendChild(fixedRow);
+                
+                // 正面朝上的行
+                const randomRow = document.createElement('tr');
+                randomRow.innerHTML = `
+                    <td>${i}</td>
+                    <td><input type="number" id="random-${i}" min="1" max="20" oninput="validateInput(this)" onchange="calculateRatios()"></td>
+                `;
+                randomBody.appendChild(randomRow);
+            }
+            
+            // 初始计算
+            calculateRatios();
+            
+            // 输入验证
+            window.validateInput = function(input) {
+                let value = parseInt(input.value);
+                if (isNaN(value)) {
+                    input.value = '';
+                } else if (value < 1) {
+                    input.value = 1;
+                } else if (value > 20) {
+                    input.value = 20;
+                }
+            };
+            
+            // 计算比值
+            window.calculateRatios = function() {
+                let fixedSum = 0;
+                let randomSum = 0;
+                
+                // 计算固定值的和
+                for (let i = 1; i <= 18; i++) {
+                    fixedSum += parseInt(document.getElementById(`fixed-${i}`).value) || 0;
+                }
+                document.getElementById('fixedTotal').textContent = fixedSum;
+                
+                // 计算正面朝上的和
+                for (let i = 1; i <= 18; i++) {
+                    const value = parseInt(document.getElementById(`random-${i}`).value) || 0;
+                    randomSum += value;
+                }
+                document.getElementById('randomTotal').textContent = randomSum;
+                
+                // 计算比值
+                if (fixedSum > 0) {
+                    const ratio = (randomSum / fixedSum).toFixed(4);
+                    
+                    // 存储比值
+                    ratioHistory[currentRatioIndex] = ratio;
+                    currentRatioIndex = (currentRatioIndex + 1) % 18;
+                    
+                    // 更新显示
+                    updateRatioDisplay();
+                }
+            };
+            
+            // 更新比值显示
+            function updateRatioDisplay() {
+                ratiosDisplay.innerHTML = '';
+                
+                // 从当前索引开始显示，保持顺序
+                for (let i = 0; i < 18; i++) {
+                    const displayIndex = (currentRatioIndex + i) % 18;
+                    const ratio = ratioHistory[displayIndex];
+                    
+                    const ratioElement = document.createElement('div');
+                    ratioElement.className = 'ratio-item';
+                    ratioElement.textContent = ratio !== null ? ratio : '0.0000';
+                    ratiosDisplay.appendChild(ratioElement);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
